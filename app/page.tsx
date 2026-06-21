@@ -1,37 +1,5 @@
 import Link from "next/link";
-
-const questions = [
-  {
-    id: 1,
-    title: "Binary Search",
-    difficulty: "Easy",
-    tags: ["Array", "Divide & Conquer"],
-  },
-  {
-    id: 2,
-    title: "Sliding Window Minimum",
-    difficulty: "Medium",
-    tags: ["Deque", "Two Pointers"],
-  },
-  {
-    id: 3,
-    title: "Implement Trie",
-    difficulty: "Medium",
-    tags: ["Tree", "Design"],
-  },
-  {
-    id: 4,
-    title: "LRU Cache",
-    difficulty: "Hard",
-    tags: ["Hash Map", "Linked List"],
-  },
-  {
-    id: 5,
-    title: "Buffer Pool Manager",
-    difficulty: "Hard",
-    tags: ["Systems", "Concurrency"],
-  },
-];
+import { questions } from "../lib/problems";
 
 const difficultyConfig: Record<
   string,
