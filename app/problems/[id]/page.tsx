@@ -30,6 +30,31 @@ const difficultyConfig: Record<
   },
 };
 
+interface RunResult {
+  stdout: string;
+  stderr: string;
+  compileOutput: string;
+  status: string;
+  error?: string;
+}
+
+interface TestResult {
+  input: string;
+  expected: string;
+  got: string;
+  passed: boolean;
+  status: string;
+}
+
+async function judge(code: string, stdin: string): Promise<RunResult> {
+  const res = await fetch("/api/run", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ code, stdin }),
+  });
+  return res.json();
+}
+
 export default function ProblemPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
@@ -37,27 +62,86 @@ export default function ProblemPage() {
   const problem = getProblem(id);
 
   const [code, setCode] = useState(problem?.starterCode ?? "");
-  const [output, setOutput] = useState<string | null>(null);
   const [running, setRunning] = useState(false);
+  const [testing, setTesting] = useState(false);
+
+  // "run" tab: raw output from first test case stdin
+  const [runOutput, setRunOutput] = useState<string | null>(null);
+
+  // "test" tab: per-case results
+  const [testResults, setTestResults] = useState<TestResult[] | null>(null);
+
+  // which output tab is active
+  const [outputTab, setOutputTab] = useState<"run" | "test">("run");
 
   async function runCode() {
+    if (!problem) return;
     setRunning(true);
-    setOutput(null);
+    setRunOutput(null);
+    setOutputTab("run");
     try {
-      const res = await fetch("/api/run", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ code }),
-      });
-      const data = await res.json();
+      const stdin = problem.testCases[0]?.input ?? "";
+      const data = await judge(code, stdin);
       const text =
         data.stdout || data.stderr || data.compileOutput || data.error || "";
-      setOutput(`[${data.status ?? "Error"}]\n${text}`);
+      setRunOutput(`[${data.status}]\n${text}`);
     } catch (err) {
-      setOutput(`[Network Error]\n${String(err)}`);
+      setRunOutput(`[Network Error]\n${String(err)}`);
     } finally {
       setRunning(false);
     }
+  }
+
+  async function runTests() {
+    if (!problem) return;
+    setTesting(true);
+    setTestResults(null);
+    setOutputTab("test");
+    const results: TestResult[] = [];
+    for (const tc of problem.testCases) {
+      try {
+        const data = await judge(code, tc.input);
+        if (data.compileOutput?.trim()) {
+          results.push({
+            input: tc.input,
+            expected: tc.expectedOutput,
+            got: "",
+            passed: false,
+            status: "Compile Error",
+          });
+          continue;
+        }
+        if (data.stderr?.trim() && !data.stdout?.trim()) {
+          results.push({
+            input: tc.input,
+            expected: tc.expectedOutput,
+            got: "",
+            passed: false,
+            status: data.status ?? "Runtime Error",
+          });
+          continue;
+        }
+        const got = (data.stdout ?? "").trim();
+        const expected = tc.expectedOutput.trim();
+        results.push({
+          input: tc.input,
+          expected,
+          got,
+          passed: got === expected,
+          status: data.status ?? "Unknown",
+        });
+      } catch {
+        results.push({
+          input: tc.input,
+          expected: tc.expectedOutput,
+          got: "",
+          passed: false,
+          status: "Network Error",
+        });
+      }
+    }
+    setTestResults(results);
+    setTesting(false);
   }
 
   if (!problem) {
@@ -79,6 +163,11 @@ export default function ProblemPage() {
   }
 
   const cfg = difficultyConfig[problem.difficulty];
+  const busy = running || testing;
+
+  const passed = testResults?.filter((r) => r.passed).length ?? 0;
+  const total = testResults?.length ?? 0;
+  const allPassed = testResults !== null && passed === total;
 
   return (
     <div className="h-screen bg-[#0B0B1A] text-white relative overflow-hidden flex flex-col">
@@ -120,47 +209,61 @@ export default function ProblemPage() {
           {problem.difficulty}
         </span>
 
-        <button
-          onClick={runCode}
-          disabled={running}
-          className="ml-auto flex items-center gap-2 px-4 py-1.5 rounded-lg bg-violet-500 hover:bg-violet-400 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-semibold font-mono transition-colors shadow-[0_0_20px_-4px_rgba(124,58,237,0.6)]"
-        >
-          {running ? (
-            <>
-              <svg
-                className="w-3.5 h-3.5 animate-spin"
-                fill="none"
-                viewBox="0 0 24 24"
-              >
-                <circle
-                  className="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  strokeWidth="4"
-                />
-                <path
-                  className="opacity-75"
+        <div className="ml-auto flex items-center gap-2">
+          <button
+            onClick={runCode}
+            disabled={busy}
+            className="flex items-center gap-2 px-4 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 disabled:opacity-40 disabled:cursor-not-allowed text-slate-200 text-sm font-semibold font-mono transition-colors"
+          >
+            {running ? (
+              <>
+                <SpinIcon />
+                Running…
+              </>
+            ) : (
+              <>
+                <svg
+                  className="w-3.5 h-3.5"
                   fill="currentColor"
-                  d="M4 12a8 8 0 018-8v8H4z"
-                />
-              </svg>
-              Running…
-            </>
-          ) : (
-            <>
-              <svg
-                className="w-3.5 h-3.5"
-                fill="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path d="M8 5v14l11-7z" />
-              </svg>
-              Run
-            </>
-          )}
-        </button>
+                  viewBox="0 0 24 24"
+                >
+                  <path d="M8 5v14l11-7z" />
+                </svg>
+                Run
+              </>
+            )}
+          </button>
+
+          <button
+            onClick={runTests}
+            disabled={busy}
+            className="flex items-center gap-2 px-4 py-1.5 rounded-lg bg-violet-500 hover:bg-violet-400 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-semibold font-mono transition-colors shadow-[0_0_20px_-4px_rgba(124,58,237,0.6)]"
+          >
+            {testing ? (
+              <>
+                <SpinIcon />
+                Testing…
+              </>
+            ) : (
+              <>
+                <svg
+                  className="w-3.5 h-3.5"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2.5}
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+                Test
+              </>
+            )}
+          </button>
+        </div>
       </header>
 
       {/* Split pane */}
@@ -213,24 +316,126 @@ export default function ProblemPage() {
           </div>
 
           {/* Output panel */}
-          {output !== null && (
-            <div className="shrink-0 border-t border-white/10 bg-black/40 backdrop-blur-sm">
-              <div className="flex items-center justify-between px-4 py-2 border-b border-white/5">
-                <span className="font-mono text-xs text-slate-500">output</span>
+          {(runOutput !== null || testResults !== null) && (
+            <div className="shrink-0 border-t border-white/10 bg-black/40 backdrop-blur-sm flex flex-col max-h-56">
+              {/* Tab bar */}
+              <div className="flex items-center border-b border-white/5 shrink-0">
                 <button
-                  onClick={() => setOutput(null)}
-                  className="font-mono text-xs text-slate-600 hover:text-slate-400 transition-colors"
+                  onClick={() => setOutputTab("run")}
+                  className={`px-4 py-2 font-mono text-xs transition-colors ${
+                    outputTab === "run"
+                      ? "text-slate-200 border-b border-violet-400"
+                      : "text-slate-600 hover:text-slate-400"
+                  }`}
+                >
+                  output
+                </button>
+                <button
+                  onClick={() => setOutputTab("test")}
+                  className={`px-4 py-2 font-mono text-xs transition-colors flex items-center gap-1.5 ${
+                    outputTab === "test"
+                      ? "text-slate-200 border-b border-violet-400"
+                      : "text-slate-600 hover:text-slate-400"
+                  }`}
+                >
+                  tests
+                  {testResults !== null && (
+                    <span
+                      className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold ${
+                        allPassed
+                          ? "bg-emerald-400/15 text-emerald-300"
+                          : "bg-rose-400/15 text-rose-300"
+                      }`}
+                    >
+                      {passed}/{total}
+                    </span>
+                  )}
+                </button>
+                <button
+                  onClick={() => {
+                    setRunOutput(null);
+                    setTestResults(null);
+                  }}
+                  className="ml-auto px-4 py-2 font-mono text-xs text-slate-600 hover:text-slate-400 transition-colors"
                 >
                   clear
                 </button>
               </div>
-              <pre className="font-mono text-xs text-slate-300 p-4 max-h-48 overflow-y-auto leading-relaxed">
-                {output}
-              </pre>
+
+              <div className="overflow-y-auto flex-1">
+                {outputTab === "run" && runOutput !== null && (
+                  <pre className="font-mono text-xs text-slate-300 p-4 leading-relaxed">
+                    {runOutput}
+                  </pre>
+                )}
+
+                {outputTab === "test" && testResults !== null && (
+                  <div className="p-3 flex flex-col gap-2">
+                    {testResults.map((r, i) => (
+                      <div
+                        key={i}
+                        className={`rounded-lg px-3 py-2 border text-xs font-mono ${
+                          r.passed
+                            ? "bg-emerald-400/5 border-emerald-400/20"
+                            : "bg-rose-400/5 border-rose-400/20"
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 mb-1">
+                          <span
+                            className={
+                              r.passed ? "text-emerald-400" : "text-rose-400"
+                            }
+                          >
+                            {r.passed ? "✓" : "✗"}
+                          </span>
+                          <span className="text-slate-400">Case {i + 1}</span>
+                          {!r.passed && (
+                            <span className="text-slate-600 text-[10px]">
+                              {r.status}
+                            </span>
+                          )}
+                        </div>
+                        {!r.passed && (
+                          <div className="grid grid-cols-2 gap-x-4 gap-y-0.5 mt-1 text-[11px]">
+                            <span className="text-slate-600">expected</span>
+                            <span className="text-slate-600">got</span>
+                            <span className="text-emerald-300 truncate">
+                              {r.expected || "(empty)"}
+                            </span>
+                            <span className="text-rose-300 truncate">
+                              {r.got || "(empty)"}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </div>
       </div>
     </div>
+  );
+}
+
+function SpinIcon() {
+  return (
+    <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+      <circle
+        className="opacity-25"
+        cx="12"
+        cy="12"
+        r="10"
+        stroke="currentColor"
+        strokeWidth="4"
+      />
+      <path
+        className="opacity-75"
+        fill="currentColor"
+        d="M4 12a8 8 0 018-8v8H4z"
+      />
+    </svg>
   );
 }
