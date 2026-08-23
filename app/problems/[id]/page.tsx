@@ -472,16 +472,30 @@ function TestResultsList({ results }: { results: TestResult[] }) {
             </button>
 
             {/* Detail — hidden when collapsed */}
-            {!isCollapsed && !r.passed && (
-              <div className="grid grid-cols-2 gap-x-4 gap-y-0.5 px-3 pb-2 text-[11px]">
-                <span className="text-slate-600">expected</span>
-                <span className="text-slate-600">got</span>
-                <pre className="text-emerald-300 whitespace-pre-wrap break-all">
-                  {r.expected || "(empty)"}
-                </pre>
-                <pre className="text-rose-300 whitespace-pre-wrap break-all">
-                  {r.got || "(empty)"}
-                </pre>
+            {!isCollapsed && (
+              <div className="flex flex-col gap-1.5 px-3 pb-2 text-[11px]">
+                <div>
+                  <span className="text-slate-600">input</span>
+                  <pre className="text-slate-300 whitespace-pre-wrap break-all mt-0.5">
+                    {r.input || "(empty)"}
+                  </pre>
+                </div>
+                <div className="grid grid-cols-2 gap-x-4">
+                  <div>
+                    <span className="text-slate-600">expected</span>
+                    <pre className="text-emerald-300 whitespace-pre-wrap break-all mt-0.5">
+                      {r.expected || "(empty)"}
+                    </pre>
+                  </div>
+                  <div>
+                    <span className="text-slate-600">got</span>
+                    <pre
+                      className={`whitespace-pre-wrap break-all mt-0.5 ${r.passed ? "text-emerald-300" : "text-rose-300"}`}
+                    >
+                      {r.got || "(empty)"}
+                    </pre>
+                  </div>
+                </div>
               </div>
             )}
           </div>
