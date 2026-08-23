@@ -39,7 +39,9 @@ Output:
 Hint
 ----
 Use an iterator starting at v.begin().
-std::advance(it, 2) moves an iterator forward by 2 positions.
+std::advance(it, 2) moves an iterator forward by 2 positions, but it does NOT
+stop at v.end() — calling it when fewer than 2 elements remain is undefined behavior.
+Guard with: if (distance(it, v.end()) >= 2) advance(it, 2); else break;
 Check it != v.end() before dereferencing.`,
     starterCode: `#include <bits/stdc++.h>
 using namespace std;
@@ -47,16 +49,18 @@ using namespace std;
 int main() {
     vector<int> v;
     int x;
-    string line;
-    getline(cin, line);
-    istringstream ss(line);
-    while (ss >> x) v.push_back(x);
+    while (cin >> x) v.push_back(x);
 
     // Use an iterator and std::advance to step through every 2 elements.
     // auto it = v.begin();
     // while (it != v.end()) {
     //     cout << *it << "\\n";
-    //     advance(it, 2);   // jumps forward by 2 — won't go past end on its own!
+    //     // advance(it, 2) walks past v.end() if only 1 element remains — UB!
+    //     // Guard with a distance check first:
+    //     if (distance(it, v.end()) >= 2)
+    //         advance(it, 2);
+    //     else
+    //         break;
     // }
 
     return 0;
@@ -99,10 +103,7 @@ using namespace std;
 int main() {
     vector<int> v;
     int x;
-    string line;
-    getline(cin, line);
-    istringstream ss(line);
-    while (ss >> x) v.push_back(x);
+    while (cin >> x) v.push_back(x);
 
     // find_if takes a predicate (lambda or function).
     // auto it = find_if(v.begin(), v.end(), [](int n) { return n < 0; });
@@ -152,10 +153,7 @@ using namespace std;
 int main() {
     vector<int> v;
     int x;
-    string line;
-    getline(cin, line);
-    istringstream ss(line);
-    while (ss >> x) v.push_back(x);
+    while (cin >> x) v.push_back(x);
 
     // std::accumulate lives in <numeric> (included via bits/stdc++.h).
     // int total = accumulate(v.begin(), v.end(), 0);
@@ -206,10 +204,7 @@ using namespace std;
 int main() {
     vector<int> v;
     int x;
-    string line;
-    getline(cin, line);
-    istringstream ss(line);
-    while (ss >> x) v.push_back(x);
+    while (cin >> x) v.push_back(x);
 
     int original = v.size();
 
