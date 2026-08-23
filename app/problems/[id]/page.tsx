@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import Link from "next/link";
@@ -55,6 +55,10 @@ async function judge(code: string, stdin: string): Promise<RunResult> {
   return res.json();
 }
 
+const MIN_PANEL_HEIGHT = 80;
+const MAX_PANEL_HEIGHT = 600;
+const DEFAULT_PANEL_HEIGHT = 224;
+
 export default function ProblemPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
@@ -65,14 +69,41 @@ export default function ProblemPage() {
   const [running, setRunning] = useState(false);
   const [testing, setTesting] = useState(false);
 
-  // "run" tab: raw output from first test case stdin
   const [runOutput, setRunOutput] = useState<string | null>(null);
-
-  // "test" tab: per-case results
   const [testResults, setTestResults] = useState<TestResult[] | null>(null);
-
-  // which output tab is active
   const [outputTab, setOutputTab] = useState<"run" | "test">("run");
+
+  const [panelHeight, setPanelHeight] = useState(DEFAULT_PANEL_HEIGHT);
+  const dragStartY = useRef<number | null>(null);
+  const dragStartHeight = useRef<number>(DEFAULT_PANEL_HEIGHT);
+
+  const onDragStart = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      dragStartY.current = e.clientY;
+      dragStartHeight.current = panelHeight;
+
+      const onMove = (ev: MouseEvent) => {
+        if (dragStartY.current === null) return;
+        const delta = dragStartY.current - ev.clientY;
+        const next = Math.min(
+          MAX_PANEL_HEIGHT,
+          Math.max(MIN_PANEL_HEIGHT, dragStartHeight.current + delta),
+        );
+        setPanelHeight(next);
+      };
+
+      const onUp = () => {
+        dragStartY.current = null;
+        window.removeEventListener("mousemove", onMove);
+        window.removeEventListener("mouseup", onUp);
+      };
+
+      window.addEventListener("mousemove", onMove);
+      window.addEventListener("mouseup", onUp);
+    },
+    [panelHeight],
+  );
 
   async function runCode() {
     if (!problem) return;
@@ -168,6 +199,7 @@ export default function ProblemPage() {
   const passed = testResults?.filter((r) => r.passed).length ?? 0;
   const total = testResults?.length ?? 0;
   const allPassed = testResults !== null && passed === total;
+  const panelOpen = runOutput !== null || testResults !== null;
 
   return (
     <div className="h-screen bg-[#0B0B1A] text-white relative overflow-hidden flex flex-col">
@@ -297,6 +329,7 @@ export default function ProblemPage() {
             <span className={`h-1.5 w-1.5 rounded-full ${cfg.bar} ml-1`} />
           </div>
 
+          {/* Editor fills remaining space */}
           <div className="flex-1 min-h-0">
             <Editor
               height="100%"
@@ -315,9 +348,20 @@ export default function ProblemPage() {
             />
           </div>
 
-          {/* Output panel */}
-          {(runOutput !== null || testResults !== null) && (
-            <div className="shrink-0 border-t border-white/10 bg-black/40 backdrop-blur-sm flex flex-col max-h-56">
+          {/* Draggable output panel */}
+          {panelOpen && (
+            <div
+              className="shrink-0 border-t border-white/10 bg-black/40 backdrop-blur-sm flex flex-col"
+              style={{ height: panelHeight }}
+            >
+              {/* Drag handle */}
+              <div
+                onMouseDown={onDragStart}
+                className="group shrink-0 flex items-center justify-center h-3 cursor-row-resize hover:bg-white/5 transition-colors"
+              >
+                <div className="w-8 h-0.5 rounded-full bg-white/20 group-hover:bg-violet-400/60 transition-colors" />
+              </div>
+
               {/* Tab bar */}
               <div className="flex items-center border-b border-white/5 shrink-0">
                 <button
