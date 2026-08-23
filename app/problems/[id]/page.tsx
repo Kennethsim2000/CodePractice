@@ -414,52 +414,79 @@ export default function ProblemPage() {
                 )}
 
                 {outputTab === "test" && testResults !== null && (
-                  <div className="p-3 flex flex-col gap-2">
-                    {testResults.map((r, i) => (
-                      <div
-                        key={i}
-                        className={`rounded-lg px-3 py-2 border text-xs font-mono ${
-                          r.passed
-                            ? "bg-emerald-400/5 border-emerald-400/20"
-                            : "bg-rose-400/5 border-rose-400/20"
-                        }`}
-                      >
-                        <div className="flex items-center gap-2 mb-1">
-                          <span
-                            className={
-                              r.passed ? "text-emerald-400" : "text-rose-400"
-                            }
-                          >
-                            {r.passed ? "✓" : "✗"}
-                          </span>
-                          <span className="text-slate-400">Case {i + 1}</span>
-                          {!r.passed && (
-                            <span className="text-slate-600 text-[10px]">
-                              {r.status}
-                            </span>
-                          )}
-                        </div>
-                        {!r.passed && (
-                          <div className="grid grid-cols-2 gap-x-4 gap-y-0.5 mt-1 text-[11px]">
-                            <span className="text-slate-600">expected</span>
-                            <span className="text-slate-600">got</span>
-                            <pre className="text-emerald-300 whitespace-pre-wrap break-all">
-                              {r.expected || "(empty)"}
-                            </pre>
-                            <pre className="text-rose-300 whitespace-pre-wrap break-all">
-                              {r.got || "(empty)"}
-                            </pre>
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
+                  <TestResultsList results={testResults} />
                 )}
               </div>
             </div>
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+function TestResultsList({ results }: { results: TestResult[] }) {
+  const [collapsed, setCollapsed] = useState<Record<number, boolean>>({});
+
+  const toggle = (i: number) =>
+    setCollapsed((prev) => ({ ...prev, [i]: !prev[i] }));
+
+  return (
+    <div className="p-3 flex flex-col gap-2">
+      {results.map((r, i) => {
+        const isCollapsed = collapsed[i] ?? false;
+        return (
+          <div
+            key={i}
+            className={`rounded-lg border text-xs font-mono ${
+              r.passed
+                ? "bg-emerald-400/5 border-emerald-400/20"
+                : "bg-rose-400/5 border-rose-400/20"
+            }`}
+          >
+            {/* Header row — always visible, click to collapse */}
+            <button
+              onClick={() => toggle(i)}
+              className="w-full flex items-center gap-2 px-3 py-2 text-left"
+            >
+              <span className={r.passed ? "text-emerald-400" : "text-rose-400"}>
+                {r.passed ? "✓" : "✗"}
+              </span>
+              <span className="text-slate-400">Case {i + 1}</span>
+              {!r.passed && (
+                <span className="text-slate-600 text-[10px]">{r.status}</span>
+              )}
+              <svg
+                className={`ml-auto w-3 h-3 text-slate-600 transition-transform ${isCollapsed ? "-rotate-90" : ""}`}
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2.5}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M19 9l-7 7-7-7"
+                />
+              </svg>
+            </button>
+
+            {/* Detail — hidden when collapsed */}
+            {!isCollapsed && !r.passed && (
+              <div className="grid grid-cols-2 gap-x-4 gap-y-0.5 px-3 pb-2 text-[11px]">
+                <span className="text-slate-600">expected</span>
+                <span className="text-slate-600">got</span>
+                <pre className="text-emerald-300 whitespace-pre-wrap break-all">
+                  {r.expected || "(empty)"}
+                </pre>
+                <pre className="text-rose-300 whitespace-pre-wrap break-all">
+                  {r.got || "(empty)"}
+                </pre>
+              </div>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }
