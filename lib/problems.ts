@@ -54,16 +54,6 @@ int main() {
     while (cin >> x) v.push_back(x);
 
     // Use an iterator and std::advance to step through every 2 elements.
-    // auto it = v.begin();
-    // while (it != v.end()) {
-    //     cout << *it << "\\n";
-    //     // advance(it, 2) walks past v.end() if only 1 element remains — UB!
-    //     // Guard with a distance check first:
-    //     if (distance(it, v.end()) >= 2)
-    //         advance(it, 2);
-    //     else
-    //         break;
-    // }
 
     return 0;
 }
@@ -106,7 +96,7 @@ int main() {
     title: "Index of First Negative",
     difficulty: "Easy",
     tags: ["Iterators", "distance", "find_if"],
-    description: `Given a list of integers, print the 0-based index of the first negative number. Print -1 if none exists.
+    description: `Given a list of integers, print the index of the first negative number. Print -1 if none exists.
 
 Input format: a single line of space-separated integers.
 
@@ -133,10 +123,8 @@ int main() {
     while (cin >> x) v.push_back(x);
 
     // find_if takes a predicate (lambda or function).
-    // auto it = find_if(v.begin(), v.end(), [](int n) { return n < 0; });
 
-    // TODO: if it == v.end(), print -1.
-    // Otherwise print std::distance(v.begin(), it).
+    // TODO: check if the iterator returned is the end, else call std::distance to obtain the index
 
     return 0;
 }
@@ -207,7 +195,6 @@ int main() {
     while (cin >> x) v.push_back(x);
 
     // std::accumulate lives in <numeric> (included via bits/stdc++.h).
-    // int total = accumulate(v.begin(), v.end(), 0);
 
     // TODO: print total, then total / v.size() (cast carefully to avoid unsigned issues).
 
@@ -279,11 +266,8 @@ int main() {
     int original = v.size();
 
     // Step 1: sort so duplicates are adjacent (required before unique).
-    // sort(v.begin(), v.end());
 
     // Step 2: unique returns iterator to new end; erase the tail.
-    // auto newEnd = unique(v.begin(), v.end());
-    // v.erase(newEnd, v.end());
 
     // TODO: print (original - v.size()), then the deduplicated vector.
 
