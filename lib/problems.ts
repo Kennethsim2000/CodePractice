@@ -12,6 +12,7 @@ export interface Problem {
   tags: string[];
   description: string;
   starterCode: string;
+  answer: string;
   testCases: TestCase[];
 }
 
@@ -43,6 +44,7 @@ std::advance(it, 2) moves an iterator forward by 2 positions, but it does NOT
 stop at v.end() — calling it when fewer than 2 elements remain is undefined behavior.
 Guard with: if (distance(it, v.end()) >= 2) advance(it, 2); else break;
 Check it != v.end() before dereferencing.`,
+
     starterCode: `#include <bits/stdc++.h>
 using namespace std;
 
@@ -66,6 +68,30 @@ int main() {
     return 0;
 }
 `,
+
+    answer: `#include <bits/stdc++.h>
+using namespace std;
+
+int main() {
+    vector<int> v;
+    int x;
+    while (cin >> x) v.push_back(x);
+
+    auto it = v.begin();
+
+    while (it != v.end()) {
+        cout << *it << "\\n";
+
+        if (distance(it, v.end()) >= 2)
+            advance(it, 2);
+        else
+            break;
+    }
+
+    return 0;
+}
+`,
+
     testCases: [
       { input: "1 2 3 4 5 6", expectedOutput: "1\n3\n5" },
       { input: "10 20 30", expectedOutput: "10\n30" },
@@ -97,6 +123,7 @@ Hint
 std::find_if(first, last, pred) returns an iterator to the first element where pred returns true.
 std::distance(v.begin(), it) converts that iterator back to an index.
 If find_if reaches the end, it returns v.end().`,
+
     starterCode: `#include <bits/stdc++.h>
 using namespace std;
 
@@ -114,6 +141,29 @@ int main() {
     return 0;
 }
 `,
+
+    answer: `#include <bits/stdc++.h>
+using namespace std;
+
+int main() {
+    vector<int> v;
+    int x;
+    while (cin >> x) v.push_back(x);
+
+    auto it = find_if(v.begin(), v.end(), [](int n) {
+        return n < 0;
+    });
+
+    if (it == v.end()) {
+        cout << -1 << "\\n";
+    } else {
+        cout << distance(v.begin(), it) << "\\n";
+    }
+
+    return 0;
+}
+`,
+
     testCases: [
       { input: "3 5 -2 8 -4", expectedOutput: "2" },
       { input: "1 2 3 4 5", expectedOutput: "-1" },
@@ -147,6 +197,7 @@ Hint
 ----
 std::accumulate(first, last, init) sums a range starting from init.
 Integer division in C++ truncates toward zero, which equals floor for positive numbers.`,
+
     starterCode: `#include <bits/stdc++.h>
 using namespace std;
 
@@ -163,6 +214,24 @@ int main() {
     return 0;
 }
 `,
+
+    answer: `#include <bits/stdc++.h>
+using namespace std;
+
+int main() {
+    vector<int> v;
+    int x;
+    while (cin >> x) v.push_back(x);
+
+    int total = accumulate(v.begin(), v.end(), 0);
+
+    cout << total << "\\n";
+    cout << total / static_cast<int>(v.size()) << "\\n";
+
+    return 0;
+}
+`,
+
     testCases: [
       { input: "1 2 3 4 5", expectedOutput: "15\n3" },
       { input: "10 20 30", expectedOutput: "60\n20" },
@@ -198,6 +267,7 @@ std::sort then std::unique is the classic combo.
 std::unique shuffles duplicates to the end and returns an iterator to the new logical end.
 Erase from that iterator to v.end() to actually remove them.
 The number of duplicates = original size minus size after unique.`,
+
     starterCode: `#include <bits/stdc++.h>
 using namespace std;
 
@@ -220,6 +290,37 @@ int main() {
     return 0;
 }
 `,
+
+    answer: `#include <bits/stdc++.h>
+using namespace std;
+
+int main() {
+    vector<int> v;
+    int x;
+    while (cin >> x) v.push_back(x);
+
+    int original = v.size();
+
+    sort(v.begin(), v.end());
+
+    auto newEnd = unique(v.begin(), v.end());
+    v.erase(newEnd, v.end());
+
+    cout << original - static_cast<int>(v.size()) << "\\n";
+
+    for (int i = 0; i < v.size(); ++i) {
+        if (i > 0)
+            cout << " ";
+
+        cout << v[i];
+    }
+
+    cout << "\\n";
+
+    return 0;
+}
+`,
+
     testCases: [
       { input: "4 1 2 1 3 2 4", expectedOutput: "3\n1 2 3 4" },
       { input: "1 2 3", expectedOutput: "0\n1 2 3" },
@@ -227,6 +328,7 @@ int main() {
       { input: "3 1 2 1 3", expectedOutput: "2\n1 2 3" },
     ],
   },
+
   {
     id: 10,
     title: "Find First Element Greater Than or Equal",
@@ -265,6 +367,7 @@ You need to find the first position where the value is greater than or equal to 
 The STL provides an algorithm that can find this position efficiently in a sorted range.
 
 The algorithm returns an iterator, so check whether the iterator reached v.end() before dereferencing it.`,
+
     starterCode: `#include <bits/stdc++.h>
 using namespace std;
 
@@ -294,6 +397,37 @@ int main() {
     return 0;
 }
 `,
+
+    answer: `#include <bits/stdc++.h>
+using namespace std;
+
+int main() {
+    vector<int> v;
+    int x;
+
+    string line;
+    getline(cin, line);
+
+    stringstream ss(line);
+    while (ss >> x) {
+        v.push_back(x);
+    }
+
+    int target;
+    cin >> target;
+
+    auto it = lower_bound(v.begin(), v.end(), target);
+
+    if (it == v.end()) {
+        cout << -1 << "\\n";
+    } else {
+        cout << *it << "\\n";
+    }
+
+    return 0;
+}
+`,
+
     testCases: [
       {
         input: "1 2 3 4 5\n3",
