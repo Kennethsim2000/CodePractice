@@ -495,7 +495,7 @@ export default function ProblemPage() {
           onClick={() => setShowAnswer(false)}
         >
           <div
-            className="w-full max-w-4xl max-h-[85vh] flex flex-col rounded-xl border border-white/10 bg-[#111122] shadow-2xl shadow-black/50 overflow-hidden"
+            className="w-full max-w-4xl h-[85vh] flex flex-col rounded-xl border border-white/10 bg-[#111122] shadow-2xl shadow-black/50 overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Modal header */}
@@ -532,10 +532,28 @@ export default function ProblemPage() {
             </div>
 
             {/* Answer code */}
-            <div className="flex-1 min-h-0 overflow-auto">
-              <pre className="p-5 font-mono text-sm leading-relaxed text-slate-300">
-                <code>{problem.answer}</code>
-              </pre>
+            <div className="flex-1 min-h-0">
+              <Editor
+                height="100%"
+                defaultLanguage="cpp"
+                theme="vs-dark"
+                value={problem.answer}
+                options={{
+                  readOnly: true,
+                  fontSize: 14,
+                  fontFamily: "var(--font-geist-mono), monospace",
+                  minimap: { enabled: false },
+                  padding: { top: 16, bottom: 16 },
+                  scrollBeyondLastLine: false,
+                  automaticLayout: true,
+                  wordWrap: "off",
+                  lineNumbers: "on",
+                  folding: true,
+                  renderLineHighlight: "none",
+                  cursorBlinking: "solid",
+                  contextmenu: false,
+                }}
+              />
             </div>
 
             {/* Modal footer */}
