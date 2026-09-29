@@ -52,6 +52,7 @@ async function judge(code: string, stdin: string): Promise<RunResult> {
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ code, stdin }),
   });
+
   return res.json();
 }
 
@@ -62,6 +63,7 @@ const DEFAULT_PANEL_HEIGHT = 224;
 export default function ProblemPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
+
   const id = Number(params.id);
   const problem = getProblem(id);
 
@@ -69,32 +71,40 @@ export default function ProblemPage() {
   const [running, setRunning] = useState(false);
   const [testing, setTesting] = useState(false);
 
+  const [showAnswer, setShowAnswer] = useState(false);
+
   const [runOutput, setRunOutput] = useState<string | null>(null);
   const [testResults, setTestResults] = useState<TestResult[] | null>(null);
   const [outputTab, setOutputTab] = useState<"run" | "test">("run");
 
   const [panelHeight, setPanelHeight] = useState(DEFAULT_PANEL_HEIGHT);
+
   const dragStartY = useRef<number | null>(null);
   const dragStartHeight = useRef<number>(DEFAULT_PANEL_HEIGHT);
 
   const onDragStart = useCallback(
     (e: React.MouseEvent) => {
       e.preventDefault();
+
       dragStartY.current = e.clientY;
       dragStartHeight.current = panelHeight;
 
       const onMove = (ev: MouseEvent) => {
         if (dragStartY.current === null) return;
+
         const delta = dragStartY.current - ev.clientY;
+
         const next = Math.min(
           MAX_PANEL_HEIGHT,
           Math.max(MIN_PANEL_HEIGHT, dragStartHeight.current + delta),
         );
+
         setPanelHeight(next);
       };
 
       const onUp = () => {
         dragStartY.current = null;
+
         window.removeEventListener("mousemove", onMove);
         window.removeEventListener("mouseup", onUp);
       };
@@ -107,14 +117,18 @@ export default function ProblemPage() {
 
   async function runCode() {
     if (!problem) return;
+
     setRunning(true);
     setRunOutput(null);
     setOutputTab("run");
+
     try {
       const stdin = problem.testCases[0]?.input ?? "";
       const data = await judge(code, stdin);
+
       const text =
         data.stdout || data.stderr || data.compileOutput || data.error || "";
+
       setRunOutput(`[${data.status}]\n${text}`);
     } catch (err) {
       setRunOutput(`[Network Error]\n${String(err)}`);
@@ -125,13 +139,17 @@ export default function ProblemPage() {
 
   async function runTests() {
     if (!problem) return;
+
     setTesting(true);
     setTestResults(null);
     setOutputTab("test");
+
     const results: TestResult[] = [];
+
     for (const tc of problem.testCases) {
       try {
         const data = await judge(code, tc.input);
+
         if (data.compileOutput?.trim()) {
           results.push({
             input: tc.input,
@@ -140,8 +158,10 @@ export default function ProblemPage() {
             passed: false,
             status: "Compile Error",
           });
+
           continue;
         }
+
         if (data.stderr?.trim() && !data.stdout?.trim()) {
           results.push({
             input: tc.input,
@@ -150,10 +170,13 @@ export default function ProblemPage() {
             passed: false,
             status: data.status ?? "Runtime Error",
           });
+
           continue;
         }
+
         const got = (data.stdout ?? "").trim();
         const expected = tc.expectedOutput.trim();
+
         results.push({
           input: tc.input,
           expected,
@@ -171,6 +194,7 @@ export default function ProblemPage() {
         });
       }
     }
+
     setTestResults(results);
     setTesting(false);
   }
@@ -182,6 +206,7 @@ export default function ProblemPage() {
           <p className="font-mono text-slate-500 mb-4">
             404 — problem not found
           </p>
+
           <Link
             href="/"
             className="text-violet-300 hover:text-violet-200 font-mono text-sm"
@@ -194,11 +219,14 @@ export default function ProblemPage() {
   }
 
   const cfg = difficultyConfig[problem.difficulty];
+
   const busy = running || testing;
 
   const passed = testResults?.filter((r) => r.passed).length ?? 0;
   const total = testResults?.length ?? 0;
+
   const allPassed = testResults !== null && passed === total;
+
   const panelOpen = runOutput !== null || testResults !== null;
 
   return (
@@ -206,6 +234,7 @@ export default function ProblemPage() {
       {/* Ambient glow */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
         <div className="absolute -top-40 -left-40 h-[26rem] w-[26rem] rounded-full bg-violet-600/20 blur-[120px]" />
+
         <div className="absolute bottom-0 right-0 h-[20rem] w-[20rem] rounded-full bg-cyan-500/15 blur-[120px]" />
       </div>
 
@@ -232,9 +261,11 @@ export default function ProblemPage() {
         </button>
 
         <div className={`h-1.5 w-1.5 rounded-full ${cfg.bar}`} />
+
         <h1 className="font-mono font-semibold text-sm text-slate-100">
           {problem.title}
         </h1>
+
         <span
           className={`px-2.5 py-0.5 rounded-full text-xs font-semibold font-mono ${cfg.badge}`}
         >
@@ -242,6 +273,35 @@ export default function ProblemPage() {
         </span>
 
         <div className="ml-auto flex items-center gap-2">
+          {/* Show Answer */}
+          <button
+            onClick={() => setShowAnswer((prev) => !prev)}
+            className="flex items-center gap-2 px-4 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 text-sm font-semibold font-mono transition-colors"
+          >
+            <svg
+              className="w-3.5 h-3.5"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+              />
+
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+              />
+            </svg>
+
+            {showAnswer ? "Hide Answer" : "Show Answer"}
+          </button>
+
+          {/* Run */}
           <button
             onClick={runCode}
             disabled={busy}
@@ -266,6 +326,7 @@ export default function ProblemPage() {
             )}
           </button>
 
+          {/* Test */}
           <button
             onClick={runTests}
             disabled={busy}
@@ -322,14 +383,16 @@ export default function ProblemPage() {
 
         {/* Right: editor + output */}
         <div className="flex-1 flex flex-col min-w-0">
+          {/* Editor header */}
           <div className="flex items-center gap-2 px-4 py-2 border-b border-white/10 bg-white/[0.02] shrink-0">
             <span className="font-mono text-xs text-slate-500">
               solution.cpp
             </span>
+
             <span className={`h-1.5 w-1.5 rounded-full ${cfg.bar} ml-1`} />
           </div>
 
-          {/* Editor fills remaining space */}
+          {/* Editor */}
           <div className="flex-1 min-h-0">
             <Editor
               height="100%"
@@ -374,6 +437,7 @@ export default function ProblemPage() {
                 >
                   output
                 </button>
+
                 <button
                   onClick={() => setOutputTab("test")}
                   className={`px-4 py-2 font-mono text-xs transition-colors flex items-center gap-1.5 ${
@@ -395,6 +459,7 @@ export default function ProblemPage() {
                     </span>
                   )}
                 </button>
+
                 <button
                   onClick={() => {
                     setRunOutput(null);
@@ -406,6 +471,7 @@ export default function ProblemPage() {
                 </button>
               </div>
 
+              {/* Output */}
               <div className="overflow-y-auto flex-1">
                 {outputTab === "run" && runOutput !== null && (
                   <pre className="font-mono text-xs text-slate-300 p-4 leading-relaxed">
@@ -421,6 +487,73 @@ export default function ProblemPage() {
           )}
         </div>
       </div>
+
+      {/* ANSWER MODAL */}
+      {showAnswer && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-6"
+          onClick={() => setShowAnswer(false)}
+        >
+          <div
+            className="w-full max-w-4xl max-h-[85vh] flex flex-col rounded-xl border border-white/10 bg-[#111122] shadow-2xl shadow-black/50 overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal header */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-white/10 shrink-0">
+              <div>
+                <h2 className="font-mono text-sm font-semibold text-white">
+                  Solution
+                </h2>
+
+                <p className="font-mono text-xs text-slate-500 mt-1">
+                  {problem.title}
+                </p>
+              </div>
+
+              <button
+                onClick={() => setShowAnswer(false)}
+                className="flex items-center justify-center w-8 h-8 rounded-lg text-slate-500 hover:text-white hover:bg-white/10 transition-colors"
+                aria-label="Close answer"
+              >
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+            </div>
+
+            {/* Answer code */}
+            <div className="flex-1 min-h-0 overflow-auto">
+              <pre className="p-5 font-mono text-sm leading-relaxed text-slate-300">
+                <code>{problem.answer}</code>
+              </pre>
+            </div>
+
+            {/* Modal footer */}
+            <div className="flex items-center justify-between px-5 py-3 border-t border-white/10 shrink-0">
+              <span className="font-mono text-xs text-slate-600">
+                solution.cpp
+              </span>
+
+              <button
+                onClick={() => setShowAnswer(false)}
+                className="px-4 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 hover:text-white text-sm font-semibold font-mono transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -429,12 +562,16 @@ function TestResultsList({ results }: { results: TestResult[] }) {
   const [collapsed, setCollapsed] = useState<Record<number, boolean>>({});
 
   const toggle = (i: number) =>
-    setCollapsed((prev) => ({ ...prev, [i]: !prev[i] }));
+    setCollapsed((prev) => ({
+      ...prev,
+      [i]: !prev[i],
+    }));
 
   return (
     <div className="p-3 flex flex-col gap-2">
       {results.map((r, i) => {
         const isCollapsed = collapsed[i] ?? false;
+
         return (
           <div
             key={i}
@@ -444,7 +581,7 @@ function TestResultsList({ results }: { results: TestResult[] }) {
                 : "bg-rose-400/5 border-rose-400/20"
             }`}
           >
-            {/* Header row — always visible, click to collapse */}
+            {/* Header row */}
             <button
               onClick={() => toggle(i)}
               className="w-full flex items-center gap-2 px-3 py-2 text-left"
@@ -452,12 +589,17 @@ function TestResultsList({ results }: { results: TestResult[] }) {
               <span className={r.passed ? "text-emerald-400" : "text-rose-400"}>
                 {r.passed ? "✓" : "✗"}
               </span>
+
               <span className="text-slate-400">Case {i + 1}</span>
+
               {!r.passed && (
                 <span className="text-slate-600 text-[10px]">{r.status}</span>
               )}
+
               <svg
-                className={`ml-auto w-3 h-3 text-slate-600 transition-transform ${isCollapsed ? "-rotate-90" : ""}`}
+                className={`ml-auto w-3 h-3 text-slate-600 transition-transform ${
+                  isCollapsed ? "-rotate-90" : ""
+                }`}
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -471,26 +613,33 @@ function TestResultsList({ results }: { results: TestResult[] }) {
               </svg>
             </button>
 
-            {/* Detail — hidden when collapsed */}
+            {/* Details */}
             {!isCollapsed && (
               <div className="flex flex-col gap-1.5 px-3 pb-2 text-[11px]">
                 <div>
                   <span className="text-slate-600">input</span>
+
                   <pre className="text-slate-300 whitespace-pre-wrap break-all mt-0.5">
                     {r.input || "(empty)"}
                   </pre>
                 </div>
+
                 <div className="grid grid-cols-2 gap-x-4">
                   <div>
                     <span className="text-slate-600">expected</span>
+
                     <pre className="text-emerald-300 whitespace-pre-wrap break-all mt-0.5">
                       {r.expected || "(empty)"}
                     </pre>
                   </div>
+
                   <div>
                     <span className="text-slate-600">got</span>
+
                     <pre
-                      className={`whitespace-pre-wrap break-all mt-0.5 ${r.passed ? "text-emerald-300" : "text-rose-300"}`}
+                      className={`whitespace-pre-wrap break-all mt-0.5 ${
+                        r.passed ? "text-emerald-300" : "text-rose-300"
+                      }`}
                     >
                       {r.got || "(empty)"}
                     </pre>
@@ -516,6 +665,7 @@ function SpinIcon() {
         stroke="currentColor"
         strokeWidth="4"
       />
+
       <path
         className="opacity-75"
         fill="currentColor"
