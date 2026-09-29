@@ -435,6 +435,749 @@ int main() {
       },
     ],
   },
+  {
+    id: 11,
+    title: "Implement a Dynamic Vector",
+    difficulty: "Medium",
+    tags: ["C++", "Memory Management", "Placement New", "RAII"],
+    description: `Implement a simplified dynamic vector that stores elements in a manually managed
+contiguous memory buffer.
+
+Unlike using new T[], you should allocate raw memory using ::operator new()
+and construct individual objects using placement new.
+
+Your vector must support:
+
+1. A default constructor.
+2. A destructor that destroys all constructed elements and releases the raw memory.
+3. size() returning the number of stored elements.
+4. capacity() returning the allocated capacity.
+5. operator[] for accessing elements.
+6. push_back() for appending elements.
+7. Automatic resizing when the vector becomes full.
+
+When the vector is full, double its capacity. If the current capacity is
+zero, grow it to 1.
+
+Important:
+-----
+::operator new() only allocates raw memory. It does NOT construct objects.
+
+For example:
+
+T* data = static_cast<T*>(::operator new(sizeof(T) * capacity));
+
+You must then explicitly construct objects using placement new:
+
+new (data + index) T(value);
+
+Similarly, because these objects were manually constructed, you must
+explicitly call their destructors before releasing the memory.
+
+You do NOT need to implement copy or move constructors/assignments in this
+question.`,
+
+    starterCode: `#include <iostream>
+#include <new>
+#include <utility>
+using namespace std;
+
+template <typename T>
+class vector {
+    T* data_;
+    size_t len_;
+    size_t capacity_;
+
+public:
+    vector() {
+        // TODO: initialize an empty vector
+    }
+
+    ~vector() {
+        // TODO:
+        // 1. Destroy every constructed element.
+        // 2. Release the raw memory using ::operator delete().
+    }
+
+    size_t size() const {
+        // TODO
+    }
+
+    size_t capacity() const {
+        // TODO
+    }
+
+    T& operator[](size_t index) {
+        // TODO
+    }
+
+    void resize(size_t newCapacity) {
+        // TODO:
+        //
+        // 1. Allocate a new raw memory block.
+        // 2. Move-construct all existing elements into the new block.
+        // 3. Destroy the old elements.
+        // 4. Release the old memory.
+        // 5. Update data_ and capacity_.
+    }
+
+    void push_back(const T& value) {
+        // TODO:
+        //
+        // If the vector is full:
+        //   - capacity 0 -> grow to 1
+        //   - otherwise -> double the capacity
+        //
+        // Then construct the new element at data_ + len_.
+    }
+};
+
+int main() {
+    vector<int> v;
+
+    v.push_back(10);
+    v.push_back(20);
+    v.push_back(30);
+    v.push_back(40);
+    v.push_back(50);
+
+    cout << "size: " << v.size() << "\\n";
+    cout << "capacity: " << v.capacity() << "\\n";
+
+    for (size_t i = 0; i < v.size(); ++i) {
+        cout << v[i] << " ";
+    }
+
+    cout << "\\n";
+
+    return 0;
+}
+`,
+
+    answer: `#include <iostream>
+#include <new>
+#include <utility>
+using namespace std;
+
+template <typename T>
+class vector {
+    T* data_;
+    size_t len_;
+    size_t capacity_;
+
+public:
+    vector()
+        : data_(nullptr), len_(0), capacity_(0) {}
+
+    ~vector() {
+        for (size_t i = 0; i < len_; ++i) {
+            data_[i].~T();
+        }
+
+        ::operator delete(data_);
+    }
+
+    size_t size() const {
+        return len_;
+    }
+
+    size_t capacity() const {
+        return capacity_;
+    }
+
+    T& operator[](size_t index) {
+        return data_[index];
+    }
+
+    void resize(size_t newCapacity) {
+        T* newData =
+            static_cast<T*>(::operator new(sizeof(T) * newCapacity));
+
+        size_t constructed = 0;
+
+        try {
+            for (; constructed < len_; ++constructed) {
+                new (newData + constructed)
+                    T(std::move(data_[constructed]));
+            }
+        } catch (...) {
+            for (size_t i = 0; i < constructed; ++i) {
+                newData[i].~T();
+            }
+
+            ::operator delete(newData);
+            throw;
+        }
+
+        for (size_t i = 0; i < len_; ++i) {
+            data_[i].~T();
+        }
+
+        ::operator delete(data_);
+
+        data_ = newData;
+        capacity_ = newCapacity;
+    }
+
+    void push_back(const T& value) {
+        if (len_ == capacity_) {
+            size_t newCapacity =
+                capacity_ == 0 ? 1 : capacity_ * 2;
+
+            resize(newCapacity);
+        }
+
+        new (data_ + len_) T(value);
+        ++len_;
+    }
+};
+
+int main() {
+    vector<int> v;
+
+    v.push_back(10);
+    v.push_back(20);
+    v.push_back(30);
+    v.push_back(40);
+    v.push_back(50);
+
+    cout << "size: " << v.size() << "\\n";
+    cout << "capacity: " << v.capacity() << "\\n";
+
+    for (size_t i = 0; i < v.size(); ++i) {
+        cout << v[i] << " ";
+    }
+
+    cout << "\\n";
+
+    return 0;
+}
+`,
+
+    testCases: [
+      {
+        input: "",
+        expectedOutput: "size: 5\ncapacity: 8\n10 20 30 40 50",
+      },
+    ],
+  },
+  {
+    id: 12,
+    title: "Implement Vector Copy Semantics",
+    difficulty: "Medium",
+    tags: ["C++", "Copy Constructor", "Copy Assignment", "Rule of 3"],
+    description: `Extend a manually managed vector by implementing its copy constructor
+and copy assignment operator.
+
+The vector owns dynamically allocated memory, so the default copy operations
+would perform a shallow copy of data_.
+
+This is incorrect because two vectors would then point to the same memory.
+
+Implement:
+
+1. Copy constructor
+2. Copy assignment operator
+
+Both operations must perform a deep copy.
+
+Copy constructor:
+-----------------
+Create a new memory buffer and copy-construct every element from the source.
+
+Copy assignment:
+----------------
+1. Check for self-assignment.
+2. Allocate the new buffer first.
+3. Copy-construct every element.
+4. Destroy the old elements.
+5. Release the old buffer.
+6. Replace the old buffer with the new one.
+
+Allocating the new buffer before destroying the old one gives the operation
+stronger exception safety: if copying an element throws, the original vector
+should remain unchanged.
+
+You may assume the vector already supports size(), capacity(), push_back(),
+resize(), and destruction.`,
+
+    starterCode: `#include <iostream>
+#include <new>
+#include <utility>
+using namespace std;
+
+template <typename T>
+class vector {
+    T* data_;
+    size_t len_;
+    size_t capacity_;
+
+public:
+    vector() {
+        // TODO
+    }
+
+    ~vector() {
+        // TODO
+    }
+
+    void push_back(const T& value) {
+        // TODO
+    }
+
+    // TODO: Implement the copy constructor.
+    vector(const vector& other) {
+    }
+
+    // TODO: Implement copy assignment.
+    vector& operator=(const vector& other) {
+        return *this;
+    }
+
+    size_t size() const {
+        return len_;
+    }
+
+    T& operator[](size_t index) {
+        return data_[index];
+    }
+};
+
+int main() {
+    vector<int> original;
+
+    original.push_back(10);
+    original.push_back(20);
+    original.push_back(30);
+
+    vector<int> copied(original);
+
+    vector<int> assigned;
+    assigned.push_back(100);
+    assigned = original;
+
+    original[0] = 999;
+
+    cout << "Original: ";
+    for (size_t i = 0; i < original.size(); ++i)
+        cout << original[i] << " ";
+
+    cout << "\\nCopied: ";
+    for (size_t i = 0; i < copied.size(); ++i)
+        cout << copied[i] << " ";
+
+    cout << "\\nAssigned: ";
+    for (size_t i = 0; i < assigned.size(); ++i)
+        cout << assigned[i] << " ";
+
+    cout << "\\n";
+
+    return 0;
+}
+`,
+
+    answer: `#include <iostream>
+#include <new>
+#include <utility>
+using namespace std;
+
+template <typename T>
+class vector {
+    T* data_;
+    size_t len_;
+    size_t capacity_;
+
+public:
+    vector()
+        : data_(nullptr), len_(0), capacity_(0) {}
+
+    ~vector() {
+        for (size_t i = 0; i < len_; ++i) {
+            data_[i].~T();
+        }
+
+        ::operator delete(data_);
+    }
+
+    void push_back(const T& value) {
+        if (len_ == capacity_) {
+            size_t newCapacity =
+                capacity_ == 0 ? 1 : capacity_ * 2;
+
+            T* newData =
+                static_cast<T*>(::operator new(sizeof(T) * newCapacity));
+
+            for (size_t i = 0; i < len_; ++i) {
+                new (newData + i) T(std::move(data_[i]));
+                data_[i].~T();
+            }
+
+            ::operator delete(data_);
+
+            data_ = newData;
+            capacity_ = newCapacity;
+        }
+
+        new (data_ + len_) T(value);
+        ++len_;
+    }
+
+    vector(const vector& other)
+        : data_(nullptr),
+          len_(0),
+          capacity_(other.capacity_) {
+
+        data_ = static_cast<T*>(
+            ::operator new(sizeof(T) * capacity_));
+
+        try {
+            for (; len_ < other.len_; ++len_) {
+                new (data_ + len_) T(other.data_[len_]);
+            }
+        } catch (...) {
+            for (size_t i = 0; i < len_; ++i) {
+                data_[i].~T();
+            }
+
+            ::operator delete(data_);
+            throw;
+        }
+    }
+
+    vector& operator=(const vector& other) {
+        if (this == &other) {
+            return *this;
+        }
+
+        T* newData = static_cast<T*>(
+            ::operator new(sizeof(T) * other.capacity_));
+
+        size_t constructed = 0;
+
+        try {
+            for (; constructed < other.len_; ++constructed) {
+                new (newData + constructed)
+                    T(other.data_[constructed]);
+            }
+        } catch (...) {
+            for (size_t i = 0; i < constructed; ++i) {
+                newData[i].~T();
+            }
+
+            ::operator delete(newData);
+            throw;
+        }
+
+        for (size_t i = 0; i < len_; ++i) {
+            data_[i].~T();
+        }
+
+        ::operator delete(data_);
+
+        data_ = newData;
+        len_ = other.len_;
+        capacity_ = other.capacity_;
+
+        return *this;
+    }
+
+    size_t size() const {
+        return len_;
+    }
+
+    T& operator[](size_t index) {
+        return data_[index];
+    }
+};
+
+int main() {
+    vector<int> original;
+
+    original.push_back(10);
+    original.push_back(20);
+    original.push_back(30);
+
+    vector<int> copied(original);
+
+    vector<int> assigned;
+    assigned.push_back(100);
+    assigned = original;
+
+    original[0] = 999;
+
+    cout << "Original: ";
+    for (size_t i = 0; i < original.size(); ++i)
+        cout << original[i] << " ";
+
+    cout << "\\nCopied: ";
+    for (size_t i = 0; i < copied.size(); ++i)
+        cout << copied[i] << " ";
+
+    cout << "\\nAssigned: ";
+    for (size_t i = 0; i < assigned.size(); ++i)
+        cout << assigned[i] << " ";
+
+    cout << "\\n";
+
+    return 0;
+}
+`,
+
+    testCases: [
+      {
+        input: "",
+        expectedOutput:
+          "Original: 999 20 30 \nCopied: 10 20 30 \nAssigned: 10 20 30",
+      },
+    ],
+  },
+  {
+    id: 13,
+    title: "Implement Vector Move Semantics",
+    difficulty: "Medium",
+    tags: [
+      "C++",
+      "Move Semantics",
+      "Move Constructor",
+      "Move Assignment",
+      "Rule of 5",
+    ],
+    description: `Implement move semantics for a manually managed vector.
+
+A vector owns a dynamically allocated buffer. Copying a large vector requires
+allocating a new buffer and copying every element.
+
+Moving allows us to transfer ownership of the existing buffer instead.
+
+Implement:
+
+1. Move constructor
+2. Move assignment operator
+
+Move constructor:
+-----------------
+Transfer data_, len_, and capacity_ from the source vector.
+
+Then reset the source vector to an empty state:
+
+data_ = nullptr
+len_ = 0
+capacity_ = 0
+
+Move assignment:
+----------------
+1. Protect against self-move-assignment.
+2. Destroy the current elements.
+3. Release the current buffer.
+4. Take ownership of the source buffer.
+5. Reset the source vector.
+
+Both operations should be noexcept.
+
+After a vector has been moved from, it must remain valid and destructible.
+Its size should be zero.`,
+
+    starterCode: `#include <iostream>
+#include <new>
+#include <utility>
+using namespace std;
+
+template <typename T>
+class vector {
+    T* data_;
+    size_t len_;
+    size_t capacity_;
+
+public:
+    vector() {
+        // TODO
+    }
+
+    ~vector() {
+        // TODO
+    }
+
+    void push_back(const T& value) {
+        // TODO
+    }
+
+    // TODO: Implement move constructor.
+    vector(vector&& other) noexcept {
+    }
+
+    // TODO: Implement move assignment.
+    vector& operator=(vector&& other) noexcept {
+        return *this;
+    }
+
+    size_t size() const {
+        return len_;
+    }
+
+    T& operator[](size_t index) {
+        return data_[index];
+    }
+};
+
+int main() {
+    vector<int> original;
+
+    original.push_back(10);
+    original.push_back(20);
+    original.push_back(30);
+
+    vector<int> moved(std::move(original));
+
+    cout << "Moved vector: ";
+    for (size_t i = 0; i < moved.size(); ++i)
+        cout << moved[i] << " ";
+
+    cout << "\\nOriginal size after move: "
+         << original.size() << "\\n";
+
+    vector<int> assigned;
+    assigned.push_back(100);
+
+    assigned = std::move(moved);
+
+    cout << "Move-assigned vector: ";
+    for (size_t i = 0; i < assigned.size(); ++i)
+        cout << assigned[i] << " ";
+
+    cout << "\\nMoved size after move assignment: "
+         << moved.size() << "\\n";
+
+    return 0;
+}
+`,
+
+    answer: `#include <iostream>
+#include <new>
+#include <utility>
+using namespace std;
+
+template <typename T>
+class vector {
+    T* data_;
+    size_t len_;
+    size_t capacity_;
+
+public:
+    vector()
+        : data_(nullptr), len_(0), capacity_(0) {}
+
+    ~vector() {
+        for (size_t i = 0; i < len_; ++i) {
+            data_[i].~T();
+        }
+
+        ::operator delete(data_);
+    }
+
+    void push_back(const T& value) {
+        if (len_ == capacity_) {
+            size_t newCapacity =
+                capacity_ == 0 ? 1 : capacity_ * 2;
+
+            T* newData =
+                static_cast<T*>(::operator new(sizeof(T) * newCapacity));
+
+            for (size_t i = 0; i < len_; ++i) {
+                new (newData + i) T(std::move(data_[i]));
+                data_[i].~T();
+            }
+
+            ::operator delete(data_);
+
+            data_ = newData;
+            capacity_ = newCapacity;
+        }
+
+        new (data_ + len_) T(value);
+        ++len_;
+    }
+
+    vector(vector&& other) noexcept
+        : data_(other.data_),
+          len_(other.len_),
+          capacity_(other.capacity_) {
+
+        other.data_ = nullptr;
+        other.len_ = 0;
+        other.capacity_ = 0;
+    }
+
+    vector& operator=(vector&& other) noexcept {
+        if (this == &other) {
+            return *this;
+        }
+
+        for (size_t i = 0; i < len_; ++i) {
+            data_[i].~T();
+        }
+
+        ::operator delete(data_);
+
+        data_ = other.data_;
+        len_ = other.len_;
+        capacity_ = other.capacity_;
+
+        other.data_ = nullptr;
+        other.len_ = 0;
+        other.capacity_ = 0;
+
+        return *this;
+    }
+
+    size_t size() const {
+        return len_;
+    }
+
+    T& operator[](size_t index) {
+        return data_[index];
+    }
+};
+
+int main() {
+    vector<int> original;
+
+    original.push_back(10);
+    original.push_back(20);
+    original.push_back(30);
+
+    vector<int> moved(std::move(original));
+
+    cout << "Moved vector: ";
+    for (size_t i = 0; i < moved.size(); ++i)
+        cout << moved[i] << " ";
+
+    cout << "\\nOriginal size after move: "
+         << original.size() << "\\n";
+
+    vector<int> assigned;
+    assigned.push_back(100);
+
+    assigned = std::move(moved);
+
+    cout << "Move-assigned vector: ";
+    for (size_t i = 0; i < assigned.size(); ++i)
+        cout << assigned[i] << " ";
+
+    cout << "\\nMoved size after move assignment: "
+         << moved.size() << "\\n";
+
+    return 0;
+}
+`,
+
+    testCases: [
+      {
+        input: "",
+        expectedOutput:
+          "Moved vector: 10 20 30 \nOriginal size after move: 0\nMove-assigned vector: 10 20 30 \nMoved size after move assignment: 0",
+      },
+    ],
+  },
 ];
 
 export function getProblem(id: number): Problem | undefined {
