@@ -227,6 +227,96 @@ int main() {
       { input: "3 1 2 1 3", expectedOutput: "2\n1 2 3" },
     ],
   },
+  {
+    id: 10,
+    title: "Find First Element Greater Than or Equal",
+    difficulty: "Easy",
+    tags: ["Algorithms", "Binary Search"],
+    description: `Given a sorted list of integers, find the first element that is greater than or equal to a given target.
+
+If no such element exists, print -1.
+
+Input format:
+The first line contains space-separated integers in sorted order.
+The second line contains the target integer.
+
+Example
+-------
+Input:
+1 2 3 4 5
+3
+
+Output:
+3
+
+Example
+-------
+Input:
+1 2 3 4 5
+6
+
+Output:
+-1
+
+Hint
+----
+You need to find the first position where the value is greater than or equal to the target.
+
+The STL provides an algorithm that can find this position efficiently in a sorted range.
+
+The algorithm returns an iterator, so check whether the iterator reached v.end() before dereferencing it.`,
+    starterCode: `#include <bits/stdc++.h>
+using namespace std;
+
+int main() {
+    vector<int> v;
+    int x;
+
+    string line;
+    getline(cin, line);
+
+    stringstream ss(line);
+    while (ss >> x) {
+        v.push_back(x);
+    }
+
+    int target;
+    cin >> target;
+
+    // TODO:
+    // Find the first element that is greater than or equal to target.
+    // The STL provides an algorithm that returns an iterator
+    // pointing to the desired position.
+    //
+    // Remember to check whether the iterator == v.end()
+    // before dereferencing it.
+
+    return 0;
+}
+`,
+    testCases: [
+      {
+        input: "1 2 3 4 5\n3",
+        expectedOutput: "3",
+      },
+      {
+        input: "1 2 3 4 5\n6",
+        expectedOutput: "-1",
+      },
+      {
+        input: "1 3 5 7 9\n4",
+        expectedOutput: "5",
+      },
+      {
+        input: "2 2 2 4 5\n2",
+        expectedOutput: "2",
+      },
+      {
+        input: "10 20 30 40\n1",
+        expectedOutput: "10",
+      },
+    ],
+  },
 ];
 
 export function getProblem(id: number): Problem | undefined {
