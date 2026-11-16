@@ -1,5 +1,13 @@
 export type Difficulty = "Easy" | "Medium" | "Hard";
 
+export type Category =
+  | "Vector"
+  | "STL"
+  | "Memory Management"
+  | "Concurrency"
+  | "Data Structures"
+  | "Systems Programming";
+
 export interface TestCase {
   input: string;
   expectedOutput: string;
@@ -8,6 +16,7 @@ export interface TestCase {
 export interface Problem {
   id: number;
   title: string;
+  category: Category;
   difficulty: Difficulty;
   tags: string[];
   description: string;
@@ -21,6 +30,7 @@ export const questions: Problem[] = [
   {
     id: 6,
     title: "Print Every Other Element",
+    category: "STL",
     difficulty: "Easy",
     tags: ["Iterators", "advance"],
     description: `Given a list of integers, print every other element starting from the first (indices 0, 2, 4, …), one per line.
@@ -94,6 +104,7 @@ int main() {
   {
     id: 7,
     title: "Index of First Negative",
+    category: "STL",
     difficulty: "Easy",
     tags: ["Iterators", "distance", "find_if"],
     description: `Given a list of integers, print the index of the first negative number. Print -1 if none exists.
@@ -166,6 +177,7 @@ int main() {
   {
     id: 8,
     title: "Sum and Mean",
+    category: "STL",
     difficulty: "Easy",
     tags: ["Algorithms", "accumulate"],
     description: `Given a list of integers, print their sum on the first line and their mean (rounded down to the nearest integer) on the second line.
@@ -231,6 +243,7 @@ int main() {
   {
     id: 9,
     title: "Count and Remove Duplicates",
+    category: "STL",
     difficulty: "Easy",
     tags: ["Algorithms", "sort", "unique", "count"],
     description: `Given a list of integers, print:
@@ -316,6 +329,7 @@ int main() {
   {
     id: 10,
     title: "Find First Element Greater Than or Equal",
+    category: "STL",
     difficulty: "Easy",
     tags: ["Algorithms", "Binary Search"],
     description: `Given a sorted list of integers, find the first element that is greater than or equal to a given target.
@@ -438,6 +452,7 @@ int main() {
   {
     id: 11,
     title: "Implement a Dynamic Vector (Part A: Memory Management)",
+    category: "Vector",
     difficulty: "Medium",
     tags: ["C++", "Memory Management", "Placement New", "RAII"],
     description: `Implement the storage-management foundation of a simplified dynamic vector.
@@ -713,6 +728,7 @@ int main() {
   {
     id: 14,
     title: "Implement a Dynamic Vector (Part B: push_back)",
+    category: "Vector",
     difficulty: "Medium",
     tags: ["C++", "Dynamic Array", "push_back", "Memory Management"],
     description: `Extend the dynamic vector from Part A by implementing push_back().
@@ -954,6 +970,7 @@ int main() {
   {
     id: 12,
     title: "Implement Vector Copy Semantics",
+    category: "Vector",
     difficulty: "Medium",
     tags: ["C++", "Copy Constructor", "Copy Assignment", "Rule of 3"],
     description: `Extend a manually managed vector by implementing its copy constructor
@@ -1224,6 +1241,7 @@ int main() {
   {
     id: 13,
     title: "Implement Vector Move Semantics",
+    category: "Vector",
     difficulty: "Medium",
     tags: [
       "C++",
