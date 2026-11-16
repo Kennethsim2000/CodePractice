@@ -460,22 +460,19 @@ When the vector is full, double its capacity. If the current capacity is
 zero, grow it to 1.
 
 Important:
-
+-----
 ::operator new() only allocates raw memory. It does NOT construct objects.
 
 For example:
-
 T* data = static_cast<T*>(::operator new(sizeof(T) * capacity));
 
 You must then explicitly construct objects using placement new:
-
 new (data + index) T(value);
 
-Because these objects were manually constructed, you must explicitly call
-their destructors before releasing the memory.
+Similarly, because these objects were manually constructed, you must
+explicitly call their destructors before releasing the memory.
 
 Use ::operator delete() to release the raw memory:
-
 ::operator delete(data);
 
 Unlike delete or delete[], ::operator delete() does NOT call object destructors.
