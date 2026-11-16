@@ -459,7 +459,6 @@ In Part A, implement:
 
 The initializer_list constructor should set size and capacity to the number
 of supplied elements. For example:
-
 vector<int> v{10, 20, 30};
 
 When resizing, assume newCapacity is greater than or equal to the current size.
