@@ -449,14 +449,22 @@ individual objects with placement new.
 In Part A, implement:
 
 1. A default constructor that initializes an empty vector.
-2. A destructor that destroys all constructed elements and releases the raw memory.
-3. size() returning the number of stored elements.
-4. capacity() returning the allocated capacity.
-5. operator[] for accessing elements.
-6. resize() to allocate a new buffer and move existing elements into it.
+2. An initializer_list constructor that allocates enough memory and
+   copy-constructs each supplied element.
+3. A destructor that destroys all constructed elements and releases the raw memory.
+4. size() returning the number of stored elements.
+5. capacity() returning the allocated capacity.
+6. operator[] for accessing elements.
+7. resize() to allocate a new buffer and move existing elements into it.
 
-When resizing, the old elements must remain alive until every element has
-been successfully constructed in the new buffer.
+The initializer_list constructor should set size and capacity to the number
+of supplied elements. For example:
+
+vector<int> v{10, 20, 30};
+
+When resizing, assume newCapacity is greater than or equal to the current size.
+The old elements must remain alive until every element has been successfully
+constructed in the new buffer.
 
 Resize exception-safety reminder:
 ---------------------------------
@@ -489,6 +497,7 @@ in this part. push_back() and automatic capacity growth are covered in Part B.`,
     starterCode: `#include <iostream>
 #include <new>
 #include <utility>
+#include <initializer_list>
 using namespace std;
 
 template <typename T>
@@ -500,6 +509,13 @@ class vector {
 public:
     vector() {
         // TODO: initialize an empty vector
+    }
+
+    vector(initializer_list<T> values) {
+        // TODO:
+        // 1. Allocate enough raw memory for all values.
+        // 2. Copy-construct each value using placement new.
+        // 3. Update len_ only after each construction succeeds.
     }
 
     ~vector() {
@@ -521,8 +537,9 @@ public:
     }
 
     void resize(size_t newCapacity) {
-        // TODO:
+        // Assume newCapacity >= size().
         //
+        // TODO:
         // 1. Allocate a new raw memory block.
         // 2. Move-construct all existing elements into the new block.
         // 3. Destroy the old elements.
@@ -534,13 +551,26 @@ public:
 };
 
 int main() {
-    vector<int> v;
+    size_t newCapacity;
+    cin >> newCapacity;
 
-    v.resize(4);
+    vector<int> empty;
+    empty.resize(2);
 
-    cout << "size: " << v.size() << "\\n";
-    cout << "capacity: " << v.capacity() << "\\n";
+    vector<int> v{10, 20, 30};
+    v.resize(newCapacity);
 
+    cout << "Empty vector: " << empty.size() << " "
+         << empty.capacity() << "\\n";
+
+    cout << "Vector: " << v.size() << " "
+         << v.capacity() << "\\n";
+
+    for (size_t i = 0; i < v.size(); ++i) {
+        cout << v[i] << " ";
+    }
+
+    cout << "\\n";
     return 0;
 }
 `,
@@ -548,6 +578,7 @@ int main() {
     answer: `#include <iostream>
 #include <new>
 #include <utility>
+#include <initializer_list>
 using namespace std;
 
 template <typename T>
@@ -559,6 +590,31 @@ class vector {
 public:
     vector()
         : data_(nullptr), len_(0), capacity_(0) {}
+
+    vector(initializer_list<T> values)
+        : data_(nullptr), len_(0), capacity_(values.size()) {
+
+        if (capacity_ == 0) {
+            return;
+        }
+
+        data_ = static_cast<T*>(
+            ::operator new(sizeof(T) * capacity_));
+
+        try {
+            for (const T& value : values) {
+                new (data_ + len_) T(value);
+                ++len_;
+            }
+        } catch (...) {
+            for (size_t i = 0; i < len_; ++i) {
+                data_[i].~T();
+            }
+
+            ::operator delete(data_);
+            throw;
+        }
+    }
 
     ~vector() {
         for (size_t i = 0; i < len_; ++i) {
@@ -612,21 +668,46 @@ public:
 };
 
 int main() {
-    vector<int> v;
+    size_t newCapacity;
+    cin >> newCapacity;
 
-    v.resize(4);
+    vector<int> empty;
+    empty.resize(2);
 
-    cout << "size: " << v.size() << "\\n";
-    cout << "capacity: " << v.capacity() << "\\n";
+    vector<int> v{10, 20, 30};
+    v.resize(newCapacity);
 
+    cout << "Empty vector: " << empty.size() << " "
+         << empty.capacity() << "\\n";
+
+    cout << "Vector: " << v.size() << " "
+         << v.capacity() << "\\n";
+
+    for (size_t i = 0; i < v.size(); ++i) {
+        cout << v[i] << " ";
+    }
+
+    cout << "\\n";
     return 0;
 }
 `,
 
     testCases: [
       {
-        input: "",
-        expectedOutput: "size: 0\\ncapacity: 4",
+        input: "3",
+        expectedOutput: "Empty vector: 0 2\\nVector: 3 3\\n10 20 30",
+      },
+      {
+        input: "4",
+        expectedOutput: "Empty vector: 0 2\\nVector: 3 4\\n10 20 30",
+      },
+      {
+        input: "8",
+        expectedOutput: "Empty vector: 0 2\\nVector: 3 8\\n10 20 30",
+      },
+      {
+        input: "16",
+        expectedOutput: "Empty vector: 0 2\\nVector: 3 16\\n10 20 30",
       },
     ],
   },
