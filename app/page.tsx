@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { questions } from "../lib/problems";
+import { questions, type Category } from "../lib/problems";
 
 const difficultyConfig: Record<
   string,
@@ -25,6 +25,15 @@ const difficultyConfig: Record<
     badge: "bg-rose-400/10 text-rose-300 ring-1 ring-inset ring-rose-400/30",
   },
 };
+
+const categoryOrder: Category[] = [
+  "Vector",
+  "STL",
+  "Memory Management",
+  "Concurrency",
+  "Data Structures",
+  "Systems Programming",
+];
 
 export default function Home() {
   const counts = {
@@ -90,55 +99,76 @@ export default function Home() {
           </div>
         </div>
 
-        <div className="space-y-3">
-          {questions.map((question, idx) => {
-            const cfg = difficultyConfig[question.difficulty];
+        <div className="space-y-10">
+          {categoryOrder.map((category) => {
+            const categoryQuestions = questions.filter(
+              (question) => question.category === category
+            );
+
+            if (categoryQuestions.length === 0) return null;
+
             return (
-              <Link key={question.id} href={`/problems/${question.id}`}>
-                <div
-                  className={`group relative flex items-center gap-5 bg-white/[0.03] hover:bg-white/[0.06] ring-1 ring-white/10 hover:ring-white/20 rounded-2xl pl-0 pr-5 py-4 backdrop-blur-sm transition-all duration-200 cursor-pointer overflow-hidden ${cfg.glow}`}
-                >
-                  <span
-                    className={`absolute left-0 top-0 bottom-0 w-1 ${cfg.bar} opacity-70 group-hover:opacity-100 transition-opacity`}
-                  />
-                  <span className="font-mono text-sm text-slate-600 group-hover:text-slate-400 transition-colors w-10 text-right tabular-nums pl-5">
-                    {String(idx + 1).padStart(2, "0")}
+              <section key={category} className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h2 className="font-mono text-sm font-semibold uppercase tracking-widest text-violet-300">
+                    {category}
+                  </h2>
+                  <span className="text-xs font-mono text-slate-500">
+                    {categoryQuestions.length} questions
                   </span>
-                  <div className="flex-1 min-w-0">
-                    <h2 className="font-semibold text-lg text-slate-100 group-hover:text-white transition-colors">
-                      {question.title}
-                    </h2>
-                    <div className="flex gap-1.5 mt-1.5">
-                      {question.tags.map((tag) => (
-                        <span
-                          key={tag}
-                          className="text-xs text-slate-500 bg-white/5 px-2 py-0.5 rounded-md font-mono"
-                        >
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                  <span
-                    className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap font-mono ${cfg.badge}`}
-                  >
-                    {question.difficulty}
-                  </span>
-                  <svg
-                    className="w-4 h-4 text-slate-600 group-hover:text-white group-hover:translate-x-1 transition-all duration-200"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    strokeWidth={2.5}
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M9 5l7 7-7 7"
-                    />
-                  </svg>
                 </div>
-              </Link>
+
+                {categoryQuestions.map((question, idx) => {
+                  const cfg = difficultyConfig[question.difficulty];
+                  return (
+                    <Link key={question.id} href={`/problems/${question.id}`}>
+                      <div
+                        className={`group relative flex items-center gap-5 bg-white/[0.03] hover:bg-white/[0.06] ring-1 ring-white/10 hover:ring-white/20 rounded-2xl pl-0 pr-5 py-4 backdrop-blur-sm transition-all duration-200 cursor-pointer overflow-hidden ${cfg.glow}`}
+                      >
+                        <span
+                          className={`absolute left-0 top-0 bottom-0 w-1 ${cfg.bar} opacity-70 group-hover:opacity-100 transition-opacity`}
+                        />
+                        <span className="font-mono text-sm text-slate-600 group-hover:text-slate-400 transition-colors w-10 text-right tabular-nums pl-5">
+                          {String(idx + 1).padStart(2, "0")}
+                        </span>
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-semibold text-lg text-slate-100 group-hover:text-white transition-colors">
+                            {question.title}
+                          </h3>
+                          <div className="flex gap-1.5 mt-1.5">
+                            {question.tags.map((tag) => (
+                              <span
+                                key={tag}
+                                className="text-xs text-slate-500 bg-white/5 px-2 py-0.5 rounded-md font-mono"
+                              >
+                                {tag}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                        <span
+                          className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap font-mono ${cfg.badge}`}
+                        >
+                          {question.difficulty}
+                        </span>
+                        <svg
+                          className="w-4 h-4 text-slate-600 group-hover:text-white group-hover:translate-x-1 transition-all duration-200"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                          strokeWidth={2.5}
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            d="M9 5l7 7-7 7"
+                          />
+                        </svg>
+                      </div>
+                    </Link>
+                  );
+                })}
+              </section>
             );
           })}
         </div>
