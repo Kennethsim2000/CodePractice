@@ -459,20 +459,44 @@ Your vector must support:
 When the vector is full, double its capacity. If the current capacity is
 zero, grow it to 1.
 
+Resize exception-safety hints:
+------------------------------
+While moving the existing elements into the new buffer, keep track of how many
+objects have been successfully constructed in the new buffer.
+
+A placement-new expression can throw if T's constructor throws. Put the
+construction loop inside a try block. If construction fails partway through:
+
+1. Destroy only the objects that were successfully constructed in the new buffer.
+2. Release the new raw memory using ::operator delete().
+3. Use throw; to rethrow the original exception.
+
+Important: increment your constructed-object counter only after placement new
+completes successfully. If construction throws, that element was not constructed
+and must not be destroyed.
+
+Do not destroy the old elements or release the old buffer until every element
+has been successfully constructed in the new buffer. This ensures you do not
+lose the original allocation during a failed resize.
+
 Important:
 -----
 ::operator new() only allocates raw memory. It does NOT construct objects.
 
 For example:
-
 T* data = static_cast<T*>(::operator new(sizeof(T) * capacity));
 
 You must then explicitly construct objects using placement new:
-
 new (data + index) T(value);
 
 Similarly, because these objects were manually constructed, you must
 explicitly call their destructors before releasing the memory.
+
+Use ::operator delete() to release the raw memory:
+::operator delete(data);
+
+Unlike delete or delete[], ::operator delete() does NOT call object destructors.
+It only deallocates the memory block, so destroy all constructed elements first.
 
 You do NOT need to implement copy or move constructors/assignments in this
 question.`,
@@ -513,6 +537,9 @@ public:
 
     void resize(size_t newCapacity) {
         // TODO:
+        //
+        // Remember to use try/catch: if moving an element throws,
+        // destroy the successfully constructed elements and release the new memory.
         //
         // 1. Allocate a new raw memory block.
         // 2. Move-construct all existing elements into the new block.
