@@ -437,47 +437,33 @@ int main() {
   },
   {
     id: 11,
-    title: "Implement a Dynamic Vector",
+    title: "Implement a Dynamic Vector (Part A: Memory Management)",
     difficulty: "Medium",
     tags: ["C++", "Memory Management", "Placement New", "RAII"],
-    description: `Implement a simplified dynamic vector that stores elements in a manually managed
-contiguous memory buffer.
+    description: `Implement the storage-management foundation of a simplified dynamic vector.
 
-Unlike using new T[], you should allocate raw memory using ::operator new()
-and construct individual objects using placement new.
+The vector stores elements in a manually managed contiguous memory buffer.
+Unlike using new T[], allocate raw memory with ::operator new() and construct
+individual objects with placement new.
 
-Your vector must support:
+In Part A, implement:
 
-1. A default constructor.
+1. A default constructor that initializes an empty vector.
 2. A destructor that destroys all constructed elements and releases the raw memory.
 3. size() returning the number of stored elements.
 4. capacity() returning the allocated capacity.
 5. operator[] for accessing elements.
-6. push_back() for appending elements.
-7. Automatic resizing when the vector becomes full.
+6. resize() to allocate a new buffer and move existing elements into it.
 
-When the vector is full, double its capacity. If the current capacity is
-zero, grow it to 1.
+When resizing, the old elements must remain alive until every element has
+been successfully constructed in the new buffer.
 
-Resize exception-safety hints:
-------------------------------
-While moving the existing elements into the new buffer, keep track of how many
-objects have been successfully constructed in the new buffer.
-
-A placement-new expression can throw if T's constructor throws. Put the
-construction loop inside a try block. If construction fails partway through:
-
-1. Destroy only the objects that were successfully constructed in the new buffer.
-2. Release the new raw memory using ::operator delete().
-3. Use throw; to rethrow the original exception.
-
-Important: increment your constructed-object counter only after placement new
-completes successfully. If construction throws, that element was not constructed
-and must not be destroyed.
-
-Do not destroy the old elements or release the old buffer until every element
-has been successfully constructed in the new buffer. This ensures you do not
-lose the original allocation during a failed resize.
+Resize exception-safety reminder:
+---------------------------------
+A placement-new expression can throw if T's constructor throws. Track how
+many objects were successfully constructed in the new buffer. If construction
+fails, destroy those objects, release the new raw memory with
+::operator delete(), and rethrow the exception with throw;.
 
 Important:
 -----
@@ -486,20 +472,19 @@ Important:
 For example:
 T* data = static_cast<T*>(::operator new(sizeof(T) * capacity));
 
-You must then explicitly construct objects using placement new:
+Construct objects individually using placement new:
 new (data + index) T(value);
 
-Similarly, because these objects were manually constructed, you must
-explicitly call their destructors before releasing the memory.
+Because these objects were manually constructed, explicitly call their
+destructors before releasing the memory.
 
 Use ::operator delete() to release the raw memory:
 ::operator delete(data);
 
 Unlike delete or delete[], ::operator delete() does NOT call object destructors.
-It only deallocates the memory block, so destroy all constructed elements first.
 
-You do NOT need to implement copy or move constructors/assignments in this
-question.`,
+You do NOT need to implement push_back(), copy operations, or move operations
+in this part. push_back() and automatic capacity growth are covered in Part B.`,
 
     starterCode: `#include <iostream>
 #include <new>
@@ -538,35 +523,224 @@ public:
     void resize(size_t newCapacity) {
         // TODO:
         //
-        // Remember to use try/catch: if moving an element throws,
-        // destroy the successfully constructed elements and release the new memory.
-        //
         // 1. Allocate a new raw memory block.
         // 2. Move-construct all existing elements into the new block.
         // 3. Destroy the old elements.
         // 4. Release the old memory.
         // 5. Update data_ and capacity_.
-    }
-
-    void push_back(const T& value) {
-        // TODO:
         //
-        // If the vector is full:
-        //   - capacity 0 -> grow to 1
-        //   - otherwise -> double the capacity
-        //
-        // Then construct the new element at data_ + len_.
+        // Remember to use try/catch for exception safety.
     }
 };
 
 int main() {
     vector<int> v;
 
-    v.push_back(10);
-    v.push_back(20);
-    v.push_back(30);
-    v.push_back(40);
-    v.push_back(50);
+    v.resize(4);
+
+    cout << "size: " << v.size() << "\\n";
+    cout << "capacity: " << v.capacity() << "\\n";
+
+    return 0;
+}
+`,
+
+    answer: `#include <iostream>
+#include <new>
+#include <utility>
+using namespace std;
+
+template <typename T>
+class vector {
+    T* data_;
+    size_t len_;
+    size_t capacity_;
+
+public:
+    vector()
+        : data_(nullptr), len_(0), capacity_(0) {}
+
+    ~vector() {
+        for (size_t i = 0; i < len_; ++i) {
+            data_[i].~T();
+        }
+
+        ::operator delete(data_);
+    }
+
+    size_t size() const {
+        return len_;
+    }
+
+    size_t capacity() const {
+        return capacity_;
+    }
+
+    T& operator[](size_t index) {
+        return data_[index];
+    }
+
+    void resize(size_t newCapacity) {
+        T* newData =
+            static_cast<T*>(::operator new(sizeof(T) * newCapacity));
+
+        size_t constructed = 0;
+
+        try {
+            for (; constructed < len_; ++constructed) {
+                new (newData + constructed)
+                    T(std::move(data_[constructed]));
+            }
+        } catch (...) {
+            for (size_t i = 0; i < constructed; ++i) {
+                newData[i].~T();
+            }
+
+            ::operator delete(newData);
+            throw;
+        }
+
+        for (size_t i = 0; i < len_; ++i) {
+            data_[i].~T();
+        }
+
+        ::operator delete(data_);
+
+        data_ = newData;
+        capacity_ = newCapacity;
+    }
+};
+
+int main() {
+    vector<int> v;
+
+    v.resize(4);
+
+    cout << "size: " << v.size() << "\\n";
+    cout << "capacity: " << v.capacity() << "\\n";
+
+    return 0;
+}
+`,
+
+    testCases: [
+      {
+        input: "",
+        expectedOutput: "size: 0\\ncapacity: 4",
+      },
+    ],
+  },
+  {
+    id: 14,
+    title: "Implement a Dynamic Vector (Part B: push_back)",
+    difficulty: "Medium",
+    tags: ["C++", "Dynamic Array", "push_back", "Memory Management"],
+    description: `Extend the dynamic vector from Part A by implementing push_back().
+
+The vector already has its storage-management functions:
+
+- A default constructor and destructor.
+- size() and capacity().
+- operator[].
+- resize(), which allocates a new buffer and move-constructs the existing elements.
+
+Your task is to implement push_back(const T& value).
+
+Requirements:
+-------------
+1. If the vector is full, grow its capacity:
+   - If capacity is 0, grow it to 1.
+   - Otherwise, double the current capacity.
+2. Use resize() to allocate the larger buffer when needed.
+3. Construct the new element at data_ + len_ using placement new.
+4. Increment len_ only after the new element has been constructed successfully.
+
+The provided main() reads integers until EOF, appends them to the vector,
+and prints its size, capacity, and elements.
+
+You do NOT need to implement copy or move constructors/assignments.`,
+
+    starterCode: `#include <iostream>
+#include <new>
+#include <utility>
+using namespace std;
+
+template <typename T>
+class vector {
+    T* data_;
+    size_t len_;
+    size_t capacity_;
+
+public:
+    vector()
+        : data_(nullptr), len_(0), capacity_(0) {}
+
+    ~vector() {
+        for (size_t i = 0; i < len_; ++i) {
+            data_[i].~T();
+        }
+
+        ::operator delete(data_);
+    }
+
+    size_t size() const {
+        return len_;
+    }
+
+    size_t capacity() const {
+        return capacity_;
+    }
+
+    T& operator[](size_t index) {
+        return data_[index];
+    }
+
+    void resize(size_t newCapacity) {
+        T* newData =
+            static_cast<T*>(::operator new(sizeof(T) * newCapacity));
+
+        size_t constructed = 0;
+
+        try {
+            for (; constructed < len_; ++constructed) {
+                new (newData + constructed)
+                    T(std::move(data_[constructed]));
+            }
+        } catch (...) {
+            for (size_t i = 0; i < constructed; ++i) {
+                newData[i].~T();
+            }
+
+            ::operator delete(newData);
+            throw;
+        }
+
+        for (size_t i = 0; i < len_; ++i) {
+            data_[i].~T();
+        }
+
+        ::operator delete(data_);
+
+        data_ = newData;
+        capacity_ = newCapacity;
+    }
+
+    void push_back(const T& value) {
+        // TODO:
+        // 1. If full, grow capacity (0 -> 1, otherwise double it).
+        // 2. Use resize() to grow the buffer.
+        // 3. Placement-new construct the new element.
+        // 4. Increment len_ after construction succeeds.
+    }
+};
+
+int main() {
+    vector<int> v;
+    int x;
+
+    while (cin >> x) {
+        v.push_back(x);
+    }
 
     cout << "size: " << v.size() << "\\n";
     cout << "capacity: " << v.capacity() << "\\n";
@@ -576,7 +750,6 @@ int main() {
     }
 
     cout << "\\n";
-
     return 0;
 }
 `,
@@ -661,12 +834,11 @@ public:
 
 int main() {
     vector<int> v;
+    int x;
 
-    v.push_back(10);
-    v.push_back(20);
-    v.push_back(30);
-    v.push_back(40);
-    v.push_back(50);
+    while (cin >> x) {
+        v.push_back(x);
+    }
 
     cout << "size: " << v.size() << "\\n";
     cout << "capacity: " << v.capacity() << "\\n";
@@ -676,15 +848,26 @@ int main() {
     }
 
     cout << "\\n";
-
     return 0;
 }
 `,
 
     testCases: [
       {
-        input: "",
-        expectedOutput: "size: 5\ncapacity: 8\n10 20 30 40 50",
+        input: "10 20 30 40 50",
+        expectedOutput: "size: 5\\ncapacity: 8\\n10 20 30 40 50 ",
+      },
+      {
+        input: "7",
+        expectedOutput: "size: 1\\ncapacity: 1\\n7 ",
+      },
+      {
+        input: "1 2",
+        expectedOutput: "size: 2\\ncapacity: 2\\n1 2 ",
+      },
+      {
+        input: "3 6 9 12",
+        expectedOutput: "size: 4\\ncapacity: 4\\n3 6 9 12 ",
       },
     ],
   },
