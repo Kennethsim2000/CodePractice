@@ -538,6 +538,9 @@ public:
     void resize(size_t newCapacity) {
         // TODO:
         //
+        // Remember to use try/catch: if moving an element throws,
+        // destroy the successfully constructed elements and release the new memory.
+        //
         // 1. Allocate a new raw memory block.
         // 2. Move-construct all existing elements into the new block.
         // 3. Destroy the old elements.
